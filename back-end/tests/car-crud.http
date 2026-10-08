@@ -1,0 +1,178 @@
+@baseUrl = http://localhost:8888
+@customerOnix = 1
+@customerKia = 2
+
+### Pré-requisito: consultar clientes e substituir os IDs acima por dois IDs existentes.
+GET {{baseUrl}}/customers
+
+### a) Toyota Corolla XEi 2.0 — campos de venda e customer_id omitidos
+# @name createCorolla
+POST {{baseUrl}}/cars
+Content-Type: application/json
+
+{
+  "brand": "Toyota",
+  "model": "Corolla XEi 2.0",
+  "color": "Prata",
+  "year_manufacture": 2022,
+  "imported": false,
+  "plates": "TST1A01"
+}
+
+> {% client.test("Toyota criado com HTTP 201", function () {
+  client.assert(response.status === 201);
+}); %}
+
+### b) Chevrolet Onix LT 1.0 — venda associada ao primeiro cliente
+# @name createOnix
+POST {{baseUrl}}/cars
+Content-Type: application/json
+
+{
+  "brand": "Chevrolet",
+  "model": "Onix LT 1.0",
+  "color": "Branco",
+  "year_manufacture": 2023,
+  "imported": false,
+  "plates": "TST1A02",
+  "selling_date": "2026-09-20T00:00:00Z",
+  "selling_price": 72900.00,
+  "customer_id": {{customerOnix}}
+}
+
+> {% client.test("Onix criado com HTTP 201", function () {
+  client.assert(response.status === 201);
+}); %}
+
+### c) Kia Sportage EX — venda associada a outro cliente
+# @name createSportage
+POST {{baseUrl}}/cars
+Content-Type: application/json
+
+{
+  "brand": "Kia",
+  "model": "Sportage EX",
+  "color": "Cinza",
+  "year_manufacture": 2024,
+  "imported": true,
+  "plates": "TST1A03",
+  "selling_date": "2026-09-28T00:00:00Z",
+  "selling_price": 139500.00,
+  "customer_id": {{customerKia}}
+}
+
+> {% client.test("Sportage criado com HTTP 201", function () {
+  client.assert(response.status === 201);
+}); %}
+
+### d) Volkswagen Polo Comfortline 1.0 TSI — mesmo cliente do Onix
+# @name createPolo
+POST {{baseUrl}}/cars
+Content-Type: application/json
+
+{
+  "brand": "Volkswagen",
+  "model": "Polo Comfortline 1.0 TSI",
+  "color": "Vermelho",
+  "year_manufacture": 2023,
+  "imported": false,
+  "plates": "TST1A04",
+  "selling_date": "2026-10-01T00:00:00Z",
+  "selling_price": 79500,
+  "customer_id": {{customerOnix}}
+}
+
+> {% client.test("Polo criado com HTTP 201", function () {
+  client.assert(response.status === 201);
+}); %}
+
+### e) Volvo XC60 T8 — campos opcionais explicitamente nulos
+# @name createVolvo
+POST {{baseUrl}}/cars
+Content-Type: application/json
+
+{
+  "brand": "Volvo",
+  "model": "XC60 T8",
+  "color": "Preto",
+  "year_manufacture": 2024,
+  "imported": true,
+  "plates": "TST1A05",
+  "selling_date": null,
+  "selling_price": null,
+  "customer_id": null
+}
+
+> {% client.test("Volvo criado com HTTP 201 e campos opcionais nulos", function () {
+  client.assert(response.status === 201);
+  client.assert(response.body.selling_date === null);
+  client.assert(response.body.selling_price === null);
+  client.assert(response.body.customer_id === null);
+}); %}
+
+### f) Fiat Toro — campos opcionais explicitamente nulos
+# @name createToro
+POST {{baseUrl}}/cars
+Content-Type: application/json
+
+{
+  "brand": "Fiat",
+  "model": "Toro",
+  "color": "Azul",
+  "year_manufacture": 2022,
+  "imported": false,
+  "plates": "TST1A06",
+  "selling_date": null,
+  "selling_price": null,
+  "customer_id": null
+}
+
+> {% client.test("Toro criado com HTTP 201 e campos opcionais nulos", function () {
+  client.assert(response.status === 201);
+  client.assert(response.body.selling_date === null);
+  client.assert(response.body.selling_price === null);
+  client.assert(response.body.customer_id === null);
+}); %}
+
+### Listar carros — HTTP 200
+# @name listCars
+GET {{baseUrl}}/cars
+
+> {% client.test("Listagem de carros com HTTP 200", function () {
+  client.assert(response.status === 200);
+}); %}
+
+### Buscar o Corolla criado — HTTP 200
+GET {{baseUrl}}/cars/{{createCorolla.response.body.$.id}}
+
+> {% client.test("Carro encontrado com HTTP 200", function () {
+  client.assert(response.status === 200);
+}); %}
+
+### Atualizar o Corolla criado — HTTP 200
+PUT {{baseUrl}}/cars/{{createCorolla.response.body.$.id}}
+Content-Type: application/json
+
+{
+  "color": "Azul",
+  "selling_date": "2026-10-02T00:00:00Z",
+  "selling_price": "95000.00"
+}
+
+> {% client.test("Carro atualizado com HTTP 200", function () {
+  client.assert(response.status === 200);
+}); %}
+
+### Excluir o Volvo não vendido (customer_id nulo) — HTTP 204
+DELETE {{baseUrl}}/cars/{{createVolvo.response.body.$.id}}
+
+> {% client.test("Carro não vendido excluído com HTTP 204", function () {
+  client.assert(response.status === 204);
+}); %}
+
+### Confirmar NotFoundError consultando um ID inexistente — HTTP 404
+GET {{baseUrl}}/cars/2147483647
+
+> {% client.test("ID inexistente retorna HTTP 404", function () {
+  client.assert(response.status === 404);
+}); %}

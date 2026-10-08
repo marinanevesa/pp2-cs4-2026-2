@@ -6,7 +6,8 @@ import logger from 'morgan'
 import indexRouter from './routes/index'
 import usersRouter from './routes/users'
 import customersRouter from './routes/customers'
-import carsRouter from './routes/car'
+import carsRouter from './routes/cars'
+import { AppError } from './errors/AppError'
 
 
 const app = express()
@@ -28,5 +29,14 @@ app.use('/users', usersRouter)
 app.use('/customers', customersRouter)
 app.use('/cars', carsRouter)
 
+app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  if (error instanceof AppError) {
+    res.status(error.statusCode).json({ message: error.message })
+    return
+  }
+
+  console.error(error)
+  res.status(500).json({ message: 'Erro interno do servidor.' })
+})
 
 export default app
